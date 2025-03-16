@@ -214,7 +214,7 @@ def plot_bounding_boxes(target_file: ImageFile, boxes_coordinates, content: str)
     list_finalbox = list(finalbox)[1:-1]
     print(list_finalbox)
     try:
-        finalbx = literal_eval(" ".join(list_finalbox))
+        finalbx = literal_eval(str().join(list_finalbox))
         print(finalbx)
 
         # Iterate over the bounding boxes

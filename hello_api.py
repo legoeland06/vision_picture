@@ -10,8 +10,6 @@ from Constants import ZEFONT
 import visa_reco as vr
 from secret import GEMINI0_KEY
 
-# importer moteur audio pour lire le texte
-# importer moteur de synthèse vocale pour lire le texte
 
 images_paths = [
     "IMG_20250226_164649.jpg",
@@ -23,43 +21,67 @@ images_paths = [
 
 def lire(texte: str):
     """
-    reads the given text using a text-to-speech engine.
+    Convert the given text to speech using the lecteur.speak method.
 
     Args:
-        texte (str): The text to be read aloud.
-
-    Returns:
-        None
+        texte (str): The text to be spoken.
     """
     lecteur.speak(texte)
 
 
-def surveillance(image: PIL.Image):
+def get_text_from_widget(widget: tk.Text):
     """
-    Analyzes carefully an image using the Gemini API and provides a detailed description in French.
+    Retrieves text content from a Tkinter Text widget starting from the second line.
 
     Args:
-        image (PIL.Image.Image, optional): The image to be analyzed. Defaults to opening "IMG_20231108_200124.jpg".
+        widget (tk.Text): The Tkinter Text widget from which to retrieve the content.
 
     Returns:
-        None: The function runs an asynchronous task to read and process the response text.
+        str: The content of the widget with an additional instruction if the content is not empty.
+             If the content is empty, returns an empty string.
     """
+    content=widget.get("2.0", tk.END)
+    print(content)
+    if len(content.strip())>0:
+        return content+"\nConsigne finale : ajoute une liste à puces avec tous les éléments de ta réponse, un élément par ligne"
+    return str()
 
+
+def surveillance(image: PIL.Image, prompt_wdgt: tk.Text):
+    """
+    Analyzes an image and provides a detailed description along with bounding boxes for identified objects.
+    Args:
+        image (PIL.Image): The image to be analyzed. If not provided, a file dialog will prompt the user to select an image.
+        prompt_wdgt (tk.Text): A Tkinter Text widget containing additional instructions or context for the analysis.
+    Returns:
+        None
+    The function performs the following steps:
+        1. Opens the image if not provided.
+        2. Initializes a client for the Gemini API using a predefined API key.
+        3. Retrieves the text from the prompt widget.
+        4. Sends the image and context to the Gemini API to generate a detailed description.
+        5. Sends the image and generated description to the Gemini API to identify objects and their bounding boxes.
+        6. Prints the generated description and bounding boxes.
+        7. Plots the bounding boxes on the image and displays the result.
+    """
     image: PIL.Image = (
         PIL.Image.open(fp=filedialog.askopenfilename()) if not image else image
     )
     client = gn.Client(api_key=GEMINI0_KEY)
+    print(prompt_wdgt.get("1.0", tk.END))
     before_response = client.models.generate_content(
         model="gemini-2.0-flash",
         contents=[
             image,
-            """
+            (
+                """
             Contexte : 
                 Tu es un modèle d’intelligence artificielle multimodal conçu pour analyser et décrire des images avec un niveau de détail élevé.
+
             Objectif : 
                 Analyser très attentivement l'image ci-dessus et de fournir une description complète, précise et nuancée du contenu visuel et en tenant compte des éléments suivants :
+
             Consignes :
-                **Format attendu** : Répond en français sous la forme d’un texte descriptif fluide et bien structuré, en évitant les listes brutes. Ta réponse doit être exhaustive mais concise. Utilise un vocabulaire varié et précis, en adaptant ton niveau de détail en fonction de la complexité de l’image. Si nécessaire, propose plusieurs interprétations.
                 **Exemple d’application** :
                     * exemple 1 : Si l’image représente une scène urbaine avec des passants sous la pluie, mentionne l’ambiance (mélancolique, dynamique), les effets visuels (gouttes de pluie sur le sol, lumières floues des néons), ainsi que les émotions potentielles des personnages.
                     * exemple 2 : Si l’image montre du texte, même en langue étrangère, essaie de le traduire ou de proposer une interprétation contextuelle (panneau indicateur, enseigne de magasin, etc.).
@@ -67,9 +89,16 @@ def surveillance(image: PIL.Image):
                     * exemple 4 : Si l’image est une œuvre d’art, essaie de reconnaître le style, l’époque ou l’artiste, en proposant une analyse esthétique et symbolique.
                     * exemple 5 : Si l’image est une partition musicale, essaie de décrire les accords, les notes, les rythmes et les nuances de manière imagée et expressive et enfin d'élaborer le fichier midi correspondant.
                     * exemple 6 : Si l’image contien un monument historique, essaie de décrire l'architecture, l'histoire et l'importance culturelle de manière détaillée et informative.
-
-            Consigne finale : ajoute une liste à puces avec tous les éléments retenus de l'image, une ligne par objet
-            """,
+                    
+                **Format attendu** : """
+                + (
+                    """ Répond en français sous la forme d’un texte descriptif fluide et bien structuré, en évitant les listes brutes. Ta réponse doit être exhaustive mais concise. Utilise un vocabulaire varié et précis, en adaptant ton niveau de détail en fonction de la complexité de l’image. Si nécessaire, propose plusieurs interprétations.
+                        Consigne finale : ajoute en fin de document une liste à puces avec tous les éléments retenus de l'image, une ligne par objet
+            """
+                )
+                if get_text_from_widget(prompt_wdgt)==str()
+                else get_text_from_widget(prompt_wdgt)
+            ),
         ],
     )
 
@@ -95,13 +124,13 @@ def surveillance(image: PIL.Image):
     vr.plot_bounding_boxes(
         target_file=image,
         boxes_coordinates=response.text,
-        content=before_response.text+"\n****************\n\n"+response.text,
+        content=before_response.text + "\n****************\n\n" + response.text,
     )
 
 
 def load_image_file():
     """
-    Opens a file dialog to select an image file and loads the image using PIL.
+    Opens a file dialog to select an image file and loads it using PIL.
 
     Returns:
         PIL.Image.Image: The loaded image file.
@@ -113,14 +142,22 @@ def load_image_file():
 if __name__ == "__main__":
 
     app = tk.Tk()
+    prompt_widget = tk.Text(master=app, height=5)
+    prompt_widget.insert(
+        "1.0", "Question importante à répondre sous forme de liste à puces:\n"
+    )
+    prompt_widget.pack(fill="x")
     button = tk.Button(
         app,
         text="Cliquer ICI pour choisir\n une image\n à me faire étudier",
         bg="black",
         fg="green",
-        padx=10,pady=10,
+        padx=10,
+        pady=10,
         font=ZEFONT[0],
-        command=lambda: vr.create_asyncio_task(surveillance(load_image_file())),
+        command=lambda: vr.create_asyncio_task(
+            surveillance(load_image_file(), prompt_wdgt=prompt_widget)
+        ),
     )
 
     button.pack(fill="both")

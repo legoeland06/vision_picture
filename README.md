@@ -3,6 +3,7 @@
 Ce projet est une application Python qui utilise l'API Gemini pour analyser des images et fournir des descriptions détaillées en français. L'application utilise également Tkinter pour l'interface utilisateur et PIL pour la manipulation des images.
 
 ![resulta_sc1.png](resulta_sc1.png)
+
 ## Structure du Projet
 
 - `hello_api.py` : Module principal qui analyse les images et appelle `visa_reco` avec les coordonnées des boîtes englobantes.
@@ -10,6 +11,7 @@ Ce projet est une application Python qui utilise l'API Gemini pour analyser des 
 - `Constants.py` : Fichier contenant des constantes utilisées dans le projet.
 - `secret.py` : Fichier contenant les clés API et autres informations sensibles.
 - `requirements.txt` : Fichier listant les dépendances du projet.
+- `test_hello_api.py` : Fichier de tests unitaires pour les fonctions du module principal.
 
 ## Installation
 
@@ -46,6 +48,13 @@ Ce projet est une application Python qui utilise l'API Gemini pour analyser des 
 - **Analyse d'images** : Utilise l'API Gemini pour analyser les images et fournir des descriptions détaillées.
 - **Affichage des résultats** : Affiche les images avec des boîtes englobantes colorées autour des objets détectés.
 - **Synthèse vocale** : Lit les descriptions des images à haute voix.
+
+## Tests
+
+Pour exécuter les tests unitaires, utilisez la commande suivante :
+```sh
+pytest
+```
 
 ## Dépendances
 
