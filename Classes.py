@@ -1,16 +1,18 @@
 """
-Classes:
-    ListCoords(BaseModel): A data model representing a labeled bounding box in 2D space.
+### ListCoords(BaseModel)
+A data model representing a labeled bounding box in 2D space.
 
-    Recipe(BaseModel): A class used to represent a Recipe.
-            contexte (str): A string representing the context of the recipe.
-            liste_a_puce (list[ListCoords]): A list of ListCoords objects representing bullet points in the recipe.
+### Recipe(BaseModel)
+A class used to represent a Recipe.
+* **contexte** (str) : A string representing the context of the recipe.
+* **liste_a_puce** (list[ListCoords]): A list of ListCoords objects representing \
+    bullet points in the recipe.
 
-    ImageLoad: A class used to represent an Image Loader.
-            get_image(): Returns the image associated with the instance.
-            set_image(image): Sets the image attribute for the instance."""
-
-
+### ImageLoad
+A class used to represent an Image Loader.
+* **get_image()** : Returns the image associated with the instance.
+* **set_image(image)** : Sets the image attribute for the instance.
+"""
 
 import PIL.Image
 import PIL.ImageFile
@@ -69,10 +71,10 @@ class ImageLoad:
         """
         return self.image
 
-    def set_image(self,image):
+    def set_image(self, image):
         """
         Sets the image attribute for the instance.
         Args:
             image: The image to be set.
         """
-        self.image=image
+        self.image = image

@@ -8,7 +8,7 @@ import threading
 import tkinter as tk
 from PIL import ImageColor, ImageFile, ImageDraw, Image, ImageTk, ImageFont
 import pyttsx3 as lecteur
-from Classes import ListCoords
+from classes import ListCoords
 
 
 additional_colors = [

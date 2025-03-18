@@ -9,28 +9,47 @@ import PIL.Image
 import PIL.ImageFile
 import PIL.ImageTk
 from google import genai as gn
-from Classes import Recipe,ImageLoad
+from classes import Recipe, ImageLoad
 import visa_reco as vr
 from secret import GEMINI_API_KEY
 
 
-
 class HelloApi:
+    """HelloApi is a class that provides a graphical user interface (GUI) for loading images,
+    displaying them, and interacting with an AI model to analyze the images and generate detailed descriptions.
+    ### Attributes:
+        image_name (str): The name of the image file.
+        image_load (ImageLoad): An object that holds the loaded image.
+        tk_image (PIL.ImageTk.PhotoImage): The Tkinter-compatible image object.
+        lancer (tk.Button): A button widget to trigger the image analysis.
+        illustration (tk.Label): A label widget to display the loaded image.
+    ### Methods:
+        get_image_name() -> str: Retrieves the name of the image.
+        set_image_name(name: str): Sets the image name and updates the configuration of the 'lancer' button.
+        set_image_tk(imagetk: PIL.ImageTk.PhotoImage): Sets the Tkinter image object.
+        get_image_tk() -> PIL.ImageTk.PhotoImage: Returns the Tkinter image object.
+        set_image_load(loaded: ImageLoad): Sets the image load and updates the illustration with the resized image.
+        get_image_load() -> ImageLoad: Returns the current image load.
+        lire(texte: str): Converts the given text to speech using the lecteur.speak method.
+        get_text_from_widget(widget: tk.Text) -> str: Retrieves text content from a Tkinter Text widget starting from the second line.
+        surveillance(image: PIL.Image, prompt_wdgt: tk.Text): Analyzes the given image and generates a detailed description and bounding boxes.
+        load_image_file() -> PIL.Image.Image: Opens a file dialog to select an image file and loads it using PIL.
+    """
 
     def __init__(self):
-        self.image_name:str=str()
-        self.image_load:ImageLoad=None
-        self.tk_image:PIL.ImageTk=None
+        self.image_name: str = str()
+        self.image_load: ImageLoad = None
+        self.tk_image: PIL.ImageTk = None
 
         app = tk.Tk()
-        frame=tk.Frame(app)
-        prompt_widget = tk.Text(master=frame, height=5, fg="white",bg="orange")
+        frame = tk.Frame(app)
+        prompt_widget = tk.Text(master=frame, height=5, fg="white", bg="orange")
         prompt_widget.insert(
             "1.0", "Question importante à répondre sous forme de liste à puces:"
         )
         prompt_widget.pack(fill="x")
-        canvas=tk.Canvas(frame,bg='black',relief="flat")
-        canvas_images=tk.Canvas(frame)
+        canvas = tk.Canvas(frame, bg="black", relief="flat")
+        canvas_images = tk.Canvas(frame)
         button = tk.Button(
             canvas,
             text="L\nO\nA\nD",
@@ -51,7 +70,9 @@ class HelloApi:
             pady=10,
             font="Trebuchet",
             command=lambda: vr.create_asyncio_task(
-                self.surveillance(image=self.image_load.image, prompt_wdgt=prompt_widget)
+                self.surveillance(
+                    image=self.image_load.image, prompt_wdgt=prompt_widget
+                )
             ),
         )
         self.illustration = tk.Label(
@@ -65,47 +86,83 @@ class HelloApi:
         frame.pack(fill="both")
         canvas.pack(fill="both")
         canvas_images.pack(fill="both")
-        button.pack(side="left",fill="both")
+        button.pack(side="left", fill="both")
         self.illustration.pack(fill="both")
         self.lancer.pack(fill="both")
         app.mainloop()
 
     def get_image_name(self):
-        return self.image_name
-    
-    def set_image_name(self,name):
-        self.image_name=name
-        self.lancer.config(fg="red")
-        
-    def set_image_tk(self,imagetk):
-        self.tk_image=imagetk
-
-    def get_image_tk(self):
-        return self.tk_image
-
-    def set_image_load(self,loaded):
-        self.image_load=loaded
-        # Convert the PIL image to a format Tkinter can use
-        _im:PIL.Image=self.image_load.get_image()
-        
-        resized=_im.resize((600, 600),PIL.Image.Resampling.NEAREST)
-        self.set_image_tk(PIL.ImageTk.PhotoImage(resized))
-        self.illustration.config(image=self.get_image_tk(),height=200,justify="center",padx=10,pady=10)
-
-    def get_image_load(self):
-        return self.image_load
-
-    def lire(self,texte: str):
         """
-        Convert the given text to speech using the lecteur.speak method.
+        Retrieve the name of the image.
+
+        Returns:
+            str: The name of the image.
+        """
+        return self.image_name
+
+    def set_image_name(self, name):
+        """
+        Sets the image name and updates the configuration of the 'lancer' attribute.
 
         Args:
-            texte (str): The text to be spoken.
+            name (str): The name to set for the image.
+
+        Returns:
+            None
         """
-        lecteur.speak(texte)
+        self.image_name = name
+        self.lancer.config(fg="red")
 
+    def set_image_tk(self, imagetk):
+        """
+        Sets the Tkinter image object.
 
-    def get_text_from_widget(self,widget: tk.Text) -> str:
+        Args:
+            imagetk (PhotoImage): The Tkinter PhotoImage object to be set.
+        """
+        self.tk_image = imagetk
+
+    def get_image_tk(self):
+        """
+        Returns the Tkinter image object.
+
+        Returns:
+            tk.PhotoImage: The Tkinter image object stored in the instance.
+        """
+        return self.tk_image
+
+    def set_image_load(self, loaded: ImageLoad):
+        """
+        Sets the image load and updates the illustration with the resized image.
+        Args:
+            loaded: An object that provides a method `get_image` which returns a PIL.Image.
+        The method performs the following steps:
+        1. Sets the `image_load` attribute to the provided `loaded` object.
+        2. Retrieves the image from the `loaded` object.
+        3. Resizes the image to 600x600 pixels using the nearest neighbor resampling method.
+        4. Converts the resized image to a format that Tkinter can use.
+        5. Updates the `illustration` widget with the new image and sets its configuration.
+        """
+        self.image_load = loaded
+        self.set_image_tk(
+            PIL.ImageTk.PhotoImage(
+                loaded.get_image().resize((600, 600), PIL.Image.Resampling.NEAREST)
+            )
+        )
+        self.illustration.config(
+            image=self.get_image_tk(), height=200, justify="center", padx=10, pady=10
+        )
+
+    def get_image_load(self):
+        """
+        Returns the current image load.
+
+        Returns:
+            object: The current image load.
+        """
+        return self.image_load
+
+    def get_text_from_widget(self, widget: tk.Text) -> str:
         """
         Retrieve text content from a Tkinter Text widget starting from the second line.
 
@@ -118,8 +175,7 @@ class HelloApi:
         content = widget.get("2.0", tk.END).strip()
         return content if content else ""
 
-
-    def surveillance(self,image: PIL.Image, prompt_wdgt: tk.Text):
+    def surveillance(self, image: PIL.Image, prompt_wdgt: tk.Text):
         """
         Analyze the given image and generate a detailed description and bounding boxes.
 
@@ -214,9 +270,6 @@ class HelloApi:
             boxes_coordinates=response.liste_a_puce,
             content=response.contexte,
         )
-    
-    
-
 
     def load_image_file(self):
         """
@@ -228,14 +281,13 @@ class HelloApi:
 
         namefile = filedialog.askopenfilename()
         self.set_image_name(Path(namefile).name)
-        suzy:ImageLoad=ImageLoad()
-        suzy.image=PIL.Image.open(namefile)
+        suzy: ImageLoad = ImageLoad()
+        suzy.image = PIL.Image.open(namefile)
         self.set_image_load(suzy)
-        
+
         return self.image_load
 
 
 if __name__ == "__main__":
 
-    helloApi=HelloApi()
-
+    helloApi = HelloApi()
