@@ -70,7 +70,7 @@ Ce module fournit des fonctions pour afficher des images avec des boîtes de dé
 - `plot_bounding_boxes(target_file, boxes_coordinates, content)`: Trace des boîtes de délimitation sur l'image donnée et affiche le résultat.
 
 ## Auteur
-Ce projet a été développé par [Votre Nom].
+Ce projet a été développé par [legoeland](https://github.com/legoeland06).
 
 ## Licence
 Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
