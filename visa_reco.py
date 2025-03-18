@@ -3,19 +3,17 @@ Module providing a function displayng picture with colored bounding-boxes
 boxes_coordinates and target_file will be received by the caller method
 """
 
-from ast import literal_eval
 import asyncio
 import threading
 import tkinter as tk
-from PIL import ImageColor, ImageFile, ImageDraw, Image, ImageTk,ImageFont
+from PIL import ImageColor, ImageFile, ImageDraw, Image, ImageTk, ImageFont
 import pyttsx3 as lecteur
+from Classes import ListCoords
+
 
 additional_colors = [
     colorname for (colorname, colorcode) in ImageColor.colormap.items()
 ]
-
-contenu_text = ""
-
 
 def create_asyncio_task(async_function):
     """
@@ -93,8 +91,8 @@ def display_result(image, imag_title, content):
     root.title("Image Display")
 
     # Resize the image to fit the screen
-    screen_width = root.winfo_screenwidth() - 50
-    screen_height = root.winfo_screenheight() - 400
+    screen_width = root.winfo_screenwidth()/2
+    screen_height = root.winfo_screenheight()/2
     image_width, image_height = image.size
 
     # Calculate the scaling factor to fit the image within the screen
@@ -109,11 +107,11 @@ def display_result(image, imag_title, content):
     tk_image = ImageTk.PhotoImage(image)
 
     # Create a label widget to display the image
-    label = tk.Label(root, image=tk_image, text=imag_title)
+    label = tk.Label(root, image=tk_image, text=imag_title,)
 
     button = tk.Button(root, text="Lire", command=lambda: alire(button, content))
 
-    text = tk.Text(root, height=10)
+    text = tk.Text(root, height=10,padx=10,pady=10,bg="black",fg="grey")
     text.insert(index="1.0", chars=content)
     # text.bind("<Button-1>", alire)
     button.pack(fill="x")
@@ -151,33 +149,22 @@ def parse_json(json_output):
     return json_output
 
 
-def plot_bounding_boxes(target_file: ImageFile, boxes_coordinates, content: str):
+def plot_bounding_boxes(target_file: ImageFile, boxes_coordinates: list[ListCoords], content: str):
     """
-    Plots bounding boxes on the given image based on the provided coordinates,
-    and displays the result.
-
+    Plots bounding boxes on the given image and displays the result.
     Args:
         target_file (ImageFile): The image file on which to plot the bounding boxes.
-        boxes_coordinates (str): A JSON string containing the coordinates of the bounding boxes.
-        content (str): Additional content to be used globally.
-
-    Returns:
-        None
-
-    The function performs the following steps:
-    1. Loads the image from the target_file.
-    2. Creates a drawing object to draw on the image.
-    3. Defines a list of colors to use for the bounding boxes.
-    4. Parses the JSON string containing the bounding box coordinates.
-    5. Iterates over the bounding boxes and draws them on the image using the defined colors.
-    6. Draws the label text (if available) near the bounding box.
-    7. Displays the image with the drawn bounding boxes in a separate thread.
+        boxes_coordinates (list[ListCoords]): A list of bounding box coordinates and labels.
+        content (str): Additional content to be displayed with the image.
+    Raises:
+        ValueError: If there is an issue with the bounding box coordinates.
+        SyntaxError: If there is an issue with the JSON format of the bounding box coordinates.
     """
 
     # Load the image
     imag = target_file
     width, height = imag.size
-    print(imag.size)
+    print(f"Taille de l'image : {imag.size}")
     # Create a drawing object
     draw = ImageDraw.Draw(imag)
 
@@ -206,27 +193,27 @@ def plot_bounding_boxes(target_file: ImageFile, boxes_coordinates, content: str)
         "violet",
         "gold",
         "silver",
-    ] + additional_colors
+    ]
 
-    jsonbound = parse_json(boxes_coordinates)
-    finalbox = list(jsonbound.splitlines()[2:-1])
+    colors.append(additional_colors)
 
-    list_finalbox = list(finalbox)[1:-1]
-    print(list_finalbox)
-    try:
-        finalbx = literal_eval(str().join(list_finalbox))
-        print(finalbx)
+    good_boxes=[element for element in boxes_coordinates if len(element.box_2d)==4]
+    if len(good_boxes)==0:
+        return
 
+    for j, boxe in enumerate(good_boxes):
+        print(f"BOITE_{j}:: {boxe.box_2d} | {boxe.label}")
         # Iterate over the bounding boxes
-        for i, bounding_box in enumerate(finalbx):
-            # Select a color from the list
-            color = colors[i % len(colors)]
-            print(bounding_box)
+        # Select a color from the list
+        color = colors[j % len(colors)]
+        for box2d in boxe:
+            if not boxe.box_2d or len(boxe.box_2d) != 4:
+                continue
             # Convert normalized coordinates to absolute coordinates
-            abs_y1 = int(bounding_box["box_2d"][0] / 1000 * height)
-            abs_x1 = int(bounding_box["box_2d"][1] / 1000 * width)
-            abs_y2 = int(bounding_box["box_2d"][2] / 1000 * height)
-            abs_x2 = int(bounding_box["box_2d"][3] / 1000 * width)
+            abs_y1 = int(boxe.box_2d[0] / 1000 * height)
+            abs_x1 = int(boxe.box_2d[1] / 1000 * width)
+            abs_y2 = int(boxe.box_2d[2] / 1000 * height)
+            abs_x2 = int(boxe.box_2d[3] / 1000 * width)
 
             if abs_x1 > abs_x2:
                 abs_x1, abs_x2 = abs_x2, abs_x1
@@ -235,24 +222,25 @@ def plot_bounding_boxes(target_file: ImageFile, boxes_coordinates, content: str)
                 abs_y1, abs_y2 = abs_y2, abs_y1
 
             # Draw the bounding box
-            draw.rectangle(((abs_x1, abs_y1), (abs_x2, abs_y2)), outline=color, width=5)
+            draw.rectangle(
+                ((abs_x1, abs_y1), (abs_x2, abs_y2)),
+                outline=color,
+                width=int(width / 400),
+            )
 
             # Draw the text
-            if "label" in bounding_box:
-                font = ImageFont.truetype("arial.ttf", size=width/75)
+            if "label" in box2d:
+                font = ImageFont.truetype("arial.ttf", size=width / 75)
                 draw.text(
-                    (abs_x1, abs_y1+6),
-                    bounding_box["label"],
+                    (abs_x1, abs_y1 + 6),
+                    boxe.label,
                     fill=color,
                     font=font,
                 )
 
-        # Display the image
+    # Display the image
 
-        thread_1 = threading.Thread(
-            group=None, target=display_result(imag, "title", content)
-        )
-        thread_1.start()
-
-    except (ValueError, SyntaxError):
-        print(f"OOPS !!! Problème de lecture du json de sortie:\n{list_finalbox}")
+    thread_1 = threading.Thread(
+        group=None, target=display_result(imag, "title", content)
+    )
+    thread_1.start()

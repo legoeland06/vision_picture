@@ -5,160 +5,189 @@ import tkinter as tk
 from tkinter import filedialog
 import pyttsx3 as lecteur
 import PIL.Image
+import PIL.ImageFile
 from google import genai as gn
 from Constants import ZEFONT
+from Classes import Recipe,ImageLoad
 import visa_reco as vr
-from secret import GEMINI0_KEY
+from secret import GEMINI_API_KEY
 
 
-images_paths = [
-    "IMG_20250226_164649.jpg",
-    "IMG_20250306_090458.jpg",
-    "IMG_20241218_124305.jpg",
-    "20171115_165635.jpg",
-]
+
+class HelloApi:
+
+    image_load:ImageLoad
+
+    def lire(self,texte: str):
+        """
+        Convert the given text to speech using the lecteur.speak method.
+
+        Args:
+            texte (str): The text to be spoken.
+        """
+        lecteur.speak(texte)
 
 
-def lire(texte: str):
-    """
-    Convert the given text to speech using the lecteur.speak method.
+    def get_text_from_widget(self,widget: tk.Text) -> str:
+        """
+        Retrieve text content from a Tkinter Text widget starting from the second line.
 
-    Args:
-        texte (str): The text to be spoken.
-    """
-    lecteur.speak(texte)
+        Args:
+            widget (tk.Text): The Tkinter Text widget to retrieve text from.
 
-
-def get_text_from_widget(widget: tk.Text):
-    """
-    Retrieves text content from a Tkinter Text widget starting from the second line.
-
-    Args:
-        widget (tk.Text): The Tkinter Text widget from which to retrieve the content.
-
-    Returns:
-        str: The content of the widget with an additional instruction if the content is not empty.
-             If the content is empty, returns an empty string.
-    """
-    content=widget.get("2.0", tk.END)
-    print(content)
-    if len(content.strip())>0:
-        return content+"\nConsigne finale : ajoute une liste à puces avec tous les éléments de ta réponse, un élément par ligne"
-    return str()
+        Returns:
+            str: The text content of the widget, or an empty string if the content is only whitespace.
+        """
+        content = widget.get("2.0", tk.END).strip()
+        return content if content else ""
 
 
-def surveillance(image: PIL.Image, prompt_wdgt: tk.Text):
-    """
-    Analyzes an image and provides a detailed description along with bounding boxes for identified objects.
-    Args:
-        image (PIL.Image): The image to be analyzed. If not provided, a file dialog will prompt the user to select an image.
-        prompt_wdgt (tk.Text): A Tkinter Text widget containing additional instructions or context for the analysis.
-    Returns:
-        None
-    The function performs the following steps:
-        1. Opens the image if not provided.
-        2. Initializes a client for the Gemini API using a predefined API key.
-        3. Retrieves the text from the prompt widget.
-        4. Sends the image and context to the Gemini API to generate a detailed description.
-        5. Sends the image and generated description to the Gemini API to identify objects and their bounding boxes.
-        6. Prints the generated description and bounding boxes.
-        7. Plots the bounding boxes on the image and displays the result.
-    """
-    image: PIL.Image = (
-        PIL.Image.open(fp=filedialog.askopenfilename()) if not image else image
-    )
-    client = gn.Client(api_key=GEMINI0_KEY)
-    print(prompt_wdgt.get("1.0", tk.END))
-    before_response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=[
-            image,
-            (
-                """
-            Contexte : 
-                Tu es un modèle d’intelligence artificielle multimodal conçu pour analyser et décrire des images avec un niveau de détail élevé.
+    def surveillance(self,image: PIL.Image, prompt_wdgt: tk.Text):
+        """
+        Analyze the given image and generate a detailed description and bounding boxes.
 
-            Objectif : 
-                Analyser très attentivement l'image ci-dessus et de fournir une description complète, précise et nuancée du contenu visuel et en tenant compte des éléments suivants :
+        Args:
+            image (PIL.Image): The image to be analyzed.
+            prompt_wdgt (tk.Text): The Tkinter Text widget containing the prompt.
 
-            Consignes :
-                **Exemple d’application** :
-                    * exemple 1 : Si l’image représente une scène urbaine avec des passants sous la pluie, mentionne l’ambiance (mélancolique, dynamique), les effets visuels (gouttes de pluie sur le sol, lumières floues des néons), ainsi que les émotions potentielles des personnages.
-                    * exemple 2 : Si l’image montre du texte, même en langue étrangère, essaie de le traduire ou de proposer une interprétation contextuelle (panneau indicateur, enseigne de magasin, etc.).
-                    * exemple 3 : Si l’image est abstraite ou conceptuelle, essaie de décrire les formes, les couleurs et les motifs de manière poétique ou métaphorique.
-                    * exemple 4 : Si l’image est une œuvre d’art, essaie de reconnaître le style, l’époque ou l’artiste, en proposant une analyse esthétique et symbolique.
-                    * exemple 5 : Si l’image est une partition musicale, essaie de décrire les accords, les notes, les rythmes et les nuances de manière imagée et expressive et enfin d'élaborer le fichier midi correspondant.
-                    * exemple 6 : Si l’image contien un monument historique, essaie de décrire l'architecture, l'histoire et l'importance culturelle de manière détaillée et informative.
-                    
-                **Format attendu** : """
-                + (
-                    """ Répond en français sous la forme d’un texte descriptif fluide et bien structuré, en évitant les listes brutes. Ta réponse doit être exhaustive mais concise. Utilise un vocabulaire varié et précis, en adaptant ton niveau de détail en fonction de la complexité de l’image. Si nécessaire, propose plusieurs interprétations.
-                        Consigne finale : ajoute en fin de document une liste à puces avec tous les éléments retenus de l'image, une ligne par objet
+        Returns:
+            Recipe: The generated description and bounding boxes.
+        """
+        if not image:
+            return
+        client = gn.Client(api_key=GEMINI_API_KEY)
+
+        def ask_it():
             """
+            Generate content using the Gemini API and parse the response.
+
+            Returns:
+                Recipe: The parsed response containing the description and bounding boxes.
+            """
+            while True:
+                result = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=[
+                        image,
+                        (
+                            """
+                            Contexte : 
+                                Tu es un modèle d’intelligence artificielle multimodal français conçu pour analyser et décrire des images avec un niveau de détail élevé.
+
+                            Objectif : 
+                                Analyser très attentivement l'image ci-dessus et fournir une description complète, précise et nuancée du contenu visuel et en tenant compte des éléments suivants :
+
+                            Consignes :
+                                **Exemple d’application** :
+                                    * exemple 1 : Si l’image représente une scène urbaine avec des passants sous la pluie, mentionne l’ambiance (mélancolique, dynamique), les effets visuels (gouttes de pluie sur le sol, lumières floues des néons), ainsi que les émotions potentielles des personnages.
+                                    * exemple 2 : Si l’image montre du texte, même en langue étrangère, essaie de le traduire ou de proposer une interprétation contextuelle (panneau indicateur, enseigne de magasin, etc.).
+                                    * exemple 3 : Si l’image est abstraite ou conceptuelle, essaie de décrire les formes, les couleurs et les motifs de manière poétique ou métaphorique.
+                                    * exemple 4 : Si l’image est une œuvre d’art, essaie de reconnaître le style, l’époque ou l’artiste, en proposant une analyse esthétique et symbolique.
+                                    * exemple 5 : Si l’image est une partition musicale, essaie de décrire les accords, les notes, les rythmes et les nuances de manière imagée et expressive et enfin d'élaborer le fichier midi correspondant.
+                                    * exemple 6 : Si l’image contien un monument historique, essaie de décrire l'architecture, l'histoire et l'importance culturelle de manière détaillée et informative.
+                                    * exemple 7 : Si l’image représente un seul objet, fais en le descriptif complet en listant les élements qui le composent.
+                                    
+                                **Format attendu** : """
+                            + (
+                                """ ATTENTION : Toutes tes REPONSES seront en FRANCAIS, de la forme d'un texte descriptif fluide et bien structuré, suivi d'une liste. Utilise un vocabulaire varié et précis, en adaptant ton niveau de détail en fonction de la complexité de l’image. Si nécessaire, propose plusieurs interprétations.
+                                    La liste à puces avec tous les éléments retenus de l'image, doit être de la forme d'une liste de bounding-box:
+                                    [
+                                    {"box_2d": [741, 321, 810, 404], "label": "a tree"},
+                                    {"box_2d": [733, 888, 788, 932], "label": "a car"},
+                                    {"box_2d": [752, 682, 818, 767], "label": "a girl"},
+                                    ]
+                                    
+                                    if there is only one box returned, write the output like this:
+                                        [
+                                        {"box_2d": [733, 888, 788, 932], "label": "object"},
+                                        ]
+                                        """
+                            )
+                            + ("\nQuestion : " + self.get_text_from_widget(prompt_wdgt))
+                            if self.get_text_from_widget(prompt_wdgt) != ""
+                            else ""
+                        ),
+                    ],
+                    config={
+                        "response_mime_type": "application/json",
+                        "response_schema": Recipe,
+                    },
                 )
-                if get_text_from_widget(prompt_wdgt)==str()
-                else get_text_from_widget(prompt_wdgt)
-            ),
-        ],
-    )
+                _sortie = result.parsed.model_dump()
+                _contexte = _sortie["contexte"]
+                _liste = [item for item in _sortie["liste_a_puce"]]
+                _recipe = Recipe(contexte=_contexte, liste_a_puce=_liste)
+                if (
+                    len(_recipe.liste_a_puce) > 0
+                    and len(_recipe.liste_a_puce[0].box_2d) == 4
+                ):
+                    return _recipe
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=[
-            image,
-            f"""context:{before_response.text}"""
-            + """\nTODO:find all items in this liste à puces, and return a list containing a bounding box for each result: 
-            formatting like : [
-  {"box_2d": [741, 321, 810, 404], "label": "a tree"},
-  {"box_2d": [733, 888, 788, 932], "label": "a car"},
-  {"box_2d": [752, 682, 818, 767], "label": "a girl"},
-  ]
-             if there is only one box returned, write the output like this:
-                [
-                {"box_2d": [733, 888, 788, 932], "label": "object"},
-                ]
-                """,
-        ],
-    )
-    print(f"\n{before_response.text}\n\n" + "*" * 50)
-    vr.plot_bounding_boxes(
-        target_file=image,
-        boxes_coordinates=response.text,
-        content=before_response.text + "\n****************\n\n" + response.text,
-    )
+        response = ask_it()
+
+        print("Description\n" + "*" * 50 + f"\n{response.contexte}\n\n" + "*" * 50)
+        print("\nliste à puce\n" + "*" * 50)
+        for puce in response.liste_a_puce:
+            print(f"{puce}")
+        print("*" * 50)
+        print(len(response.liste_a_puce))
+
+        vr.plot_bounding_boxes(
+            target_file=image,
+            boxes_coordinates=response.liste_a_puce,
+            content=response.contexte + "\n" + str(response.liste_a_puce),
+        )
 
 
-def load_image_file():
-    """
-    Opens a file dialog to select an image file and loads it using PIL.
+    def load_image_file(self):
+        """
+        Opens a file dialog to select an image file and loads it using PIL.
 
-    Returns:
-        PIL.Image.Image: The loaded image file.
-    """
-    image_file = PIL.Image.open(filedialog.askopenfilename())
-    return image_file
+        Returns:
+            PIL.Image.Image: The loaded image file.
+        """
+
+        namefile = filedialog.askopenfilename()
+        suzy:ImageLoad=ImageLoad()
+        suzy.image=PIL.Image.open(namefile)
+        self.image_load=suzy
+        return self.image_load
 
 
 if __name__ == "__main__":
 
     app = tk.Tk()
-    prompt_widget = tk.Text(master=app, height=5)
+    helloApi=HelloApi()
+
+    image_load=helloApi.load_image_file()
+    prompt_widget = tk.Text(master=app, height=5, fg="green")
     prompt_widget.insert(
-        "1.0", "Question importante à répondre sous forme de liste à puces:\n"
+        "1.0", "Question importante à répondre sous forme de liste à puces:"
     )
     prompt_widget.pack(fill="x")
     button = tk.Button(
         app,
-        text="Cliquer ICI pour choisir\n une image\n à me faire étudier",
+        text="Cliquer ICI pour choisir\n une image",
         bg="black",
         fg="green",
         padx=10,
         pady=10,
         font=ZEFONT[0],
+        command=helloApi.load_image_file,
+    )
+    lancer = tk.Button(
+        app,
+        text="Décrir l'image",
+        bg="orange",
+        fg="white",
+        padx=10,
+        pady=10,
+        font=ZEFONT[0],
         command=lambda: vr.create_asyncio_task(
-            surveillance(load_image_file(), prompt_wdgt=prompt_widget)
+            helloApi.surveillance(image=helloApi.image_load.image, prompt_wdgt=prompt_widget)
         ),
     )
 
     button.pack(fill="both")
+    lancer.pack(fill="both")
     app.mainloop()
