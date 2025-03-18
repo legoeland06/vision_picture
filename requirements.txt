@@ -3,6 +3,7 @@ anyio==4.8.0
 cachetools==5.5.2
 certifi==2025.1.31
 charset-normalizer==3.4.1
+colorama==0.4.6
 comtypes==1.4.10
 google-auth==2.38.0
 google-genai==1.5.0
@@ -10,12 +11,16 @@ h11==0.14.0
 httpcore==1.0.7
 httpx==0.28.1
 idna==3.10
+iniconfig==2.0.0
+packaging==24.2
 pillow==11.1.0
+pluggy==1.5.0
 pyasn1==0.6.1
 pyasn1_modules==0.4.1
 pydantic==2.10.6
 pydantic_core==2.27.2
 pypiwin32==223
+pytest==8.3.5
 pyttsx3==2.98
 pywin32==309
 requests==2.32.3
