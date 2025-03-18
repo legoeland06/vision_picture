@@ -67,7 +67,8 @@ def alire(self: tk.Text, content):
     thread_2.start()
 
 
-def display_result(image, imag_title, content):
+def display_result(image, imag_title, content,good_boxes:list[ListCoords]
+):
     """
     Display an image in a Tkinter window with a title and additional widgets.
 
@@ -111,8 +112,13 @@ def display_result(image, imag_title, content):
 
     button = tk.Button(root, text="Lire", command=lambda: alire(button, content))
 
-    text = tk.Text(root, height=10,padx=10,pady=10,bg="black",fg="grey")
-    text.insert(index="1.0", chars=content)
+    text = tk.Text(root, height=10,padx=10,pady=10,bg="maroon",fg="white",wrap="word")
+
+    text.insert(index="1.0", chars=content+"\n\nBounding boxes\n********************************\n")
+    
+    for element in good_boxes:
+        text.insert(index=tk.END, chars=f"{element.label} :: {element.box_2d}\n")
+
     # text.bind("<Button-1>", alire)
     button.pack(fill="x")
     text.pack(fill="x")
@@ -241,6 +247,6 @@ def plot_bounding_boxes(target_file: ImageFile, boxes_coordinates: list[ListCoor
     # Display the image
 
     thread_1 = threading.Thread(
-        group=None, target=display_result(imag, "title", content)
+        group=None, target=display_result(imag, "title", content,good_boxes)
     )
     thread_1.start()

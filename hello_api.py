@@ -1,13 +1,14 @@
 """Module providing a function analysing picture
 and call visa_reco with bounding-boxes coordinates parameters"""
 
+from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
 import pyttsx3 as lecteur
 import PIL.Image
 import PIL.ImageFile
+import PIL.ImageTk
 from google import genai as gn
-from Constants import ZEFONT
 from Classes import Recipe,ImageLoad
 import visa_reco as vr
 from secret import GEMINI_API_KEY
@@ -16,7 +17,83 @@ from secret import GEMINI_API_KEY
 
 class HelloApi:
 
-    image_load:ImageLoad
+    def __init__(self):
+        self.image_name:str=str()
+        self.image_load:ImageLoad=None
+        self.tk_image:PIL.ImageTk=None
+
+        app = tk.Tk()
+        frame=tk.Frame(app)
+        prompt_widget = tk.Text(master=frame, height=5, fg="white",bg="orange")
+        prompt_widget.insert(
+            "1.0", "Question importante à répondre sous forme de liste à puces:"
+        )
+        prompt_widget.pack(fill="x")
+        canvas=tk.Canvas(frame,bg='black',relief="flat")
+        canvas_images=tk.Canvas(frame)
+        button = tk.Button(
+            canvas,
+            text="L\nO\nA\nD",
+            bg="black",
+            fg="green",
+            padx=10,
+            pady=10,
+            font="Trebuchet",
+            command=self.load_image_file,
+        )
+        self.lancer = tk.Button(
+            canvas_images,
+            text="ENVOYER",
+            width=10,
+            bg="orange",
+            fg="white",
+            padx=10,
+            pady=10,
+            font="Trebuchet",
+            command=lambda: vr.create_asyncio_task(
+                self.surveillance(image=self.image_load.image, prompt_wdgt=prompt_widget)
+            ),
+        )
+        self.illustration = tk.Label(
+            canvas,
+            text="NO IMAGE LOADED",
+            bg="black",
+            fg="white",
+            font="Trebuchet",
+        )
+
+        frame.pack(fill="both")
+        canvas.pack(fill="both")
+        canvas_images.pack(fill="both")
+        button.pack(side="left",fill="both")
+        self.illustration.pack(fill="both")
+        self.lancer.pack(fill="both")
+        app.mainloop()
+
+    def get_image_name(self):
+        return self.image_name
+    
+    def set_image_name(self,name):
+        self.image_name=name
+        self.lancer.config(fg="red")
+        
+    def set_image_tk(self,imagetk):
+        self.tk_image=imagetk
+
+    def get_image_tk(self):
+        return self.tk_image
+
+    def set_image_load(self,loaded):
+        self.image_load=loaded
+        # Convert the PIL image to a format Tkinter can use
+        _im:PIL.Image=self.image_load.get_image()
+        
+        resized=_im.resize((600, 600),PIL.Image.Resampling.NEAREST)
+        self.set_image_tk(PIL.ImageTk.PhotoImage(resized))
+        self.illustration.config(image=self.get_image_tk(),height=200,justify="center",padx=10,pady=10)
+
+    def get_image_load(self):
+        return self.image_load
 
     def lire(self,texte: str):
         """
@@ -105,7 +182,7 @@ class HelloApi:
                             )
                             + ("\nQuestion : " + self.get_text_from_widget(prompt_wdgt))
                             if self.get_text_from_widget(prompt_wdgt) != ""
-                            else ""
+                            else "\nATTENTION : Toutes tes REPONSES seront en FRANCAIS"
                         ),
                     ],
                     config={
@@ -135,8 +212,10 @@ class HelloApi:
         vr.plot_bounding_boxes(
             target_file=image,
             boxes_coordinates=response.liste_a_puce,
-            content=response.contexte + "\n" + str(response.liste_a_puce),
+            content=response.contexte,
         )
+    
+    
 
 
     def load_image_file(self):
@@ -148,46 +227,15 @@ class HelloApi:
         """
 
         namefile = filedialog.askopenfilename()
+        self.set_image_name(Path(namefile).name)
         suzy:ImageLoad=ImageLoad()
         suzy.image=PIL.Image.open(namefile)
-        self.image_load=suzy
+        self.set_image_load(suzy)
+        
         return self.image_load
 
 
 if __name__ == "__main__":
 
-    app = tk.Tk()
     helloApi=HelloApi()
 
-    image_load=helloApi.load_image_file()
-    prompt_widget = tk.Text(master=app, height=5, fg="green")
-    prompt_widget.insert(
-        "1.0", "Question importante à répondre sous forme de liste à puces:"
-    )
-    prompt_widget.pack(fill="x")
-    button = tk.Button(
-        app,
-        text="Cliquer ICI pour choisir\n une image",
-        bg="black",
-        fg="green",
-        padx=10,
-        pady=10,
-        font=ZEFONT[0],
-        command=helloApi.load_image_file,
-    )
-    lancer = tk.Button(
-        app,
-        text="Décrir l'image",
-        bg="orange",
-        fg="white",
-        padx=10,
-        pady=10,
-        font=ZEFONT[0],
-        command=lambda: vr.create_asyncio_task(
-            helloApi.surveillance(image=helloApi.image_load.image, prompt_wdgt=prompt_widget)
-        ),
-    )
-
-    button.pack(fill="both")
-    lancer.pack(fill="both")
-    app.mainloop()
