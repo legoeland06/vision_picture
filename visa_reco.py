@@ -7,13 +7,14 @@ import asyncio
 import threading
 import tkinter as tk
 from PIL import ImageColor, ImageFile, ImageDraw, Image, ImageTk, ImageFont
-import pyttsx3 as lecteur
+import lire_text as lire
 from classes import ListCoords
 
 
 additional_colors = [
     colorname for (colorname, colorcode) in ImageColor.colormap.items()
 ]
+
 
 def create_asyncio_task(async_function):
     """
@@ -25,20 +26,7 @@ def create_asyncio_task(async_function):
     Returns:
         None
     """
-    asyncio.run(async_function)
-
-
-async def lire(texte):
-    """
-    Asynchronously reads the given text using a text-to-speech engine.
-
-    Args:
-        texte (str): The text to be read aloud.
-
-    Returns:
-        None
-    """
-    lecteur.speak(texte)
+    asyncio.run(async_function).close()
 
 
 def alire(self: tk.Text, content):
@@ -56,19 +44,17 @@ def alire(self: tk.Text, content):
     Returns:
         None
     """
+
     try:
         content = self.selection_get()
     except tk.TclError:
         pass
 
-    thread_2 = threading.Thread(
-        group=None, target=lambda: create_asyncio_task(lire(content))
-    )
-    thread_2.start()
+    if content:
+        lire.lancer(content)
 
 
-def display_result(image, imag_title, content,good_boxes:list[ListCoords]
-):
+def display_result(image, imag_title, content, good_boxes: list[ListCoords]):
     """
     Display an image in a Tkinter window with a title and additional widgets.
 
@@ -92,8 +78,8 @@ def display_result(image, imag_title, content,good_boxes:list[ListCoords]
     root.title("Image Display")
 
     # Resize the image to fit the screen
-    screen_width = root.winfo_screenwidth()/2
-    screen_height = root.winfo_screenheight()/2
+    screen_width = root.winfo_screenwidth() / 2
+    screen_height = root.winfo_screenheight() / 2
     image_width, image_height = image.size
 
     # Calculate the scaling factor to fit the image within the screen
@@ -108,18 +94,26 @@ def display_result(image, imag_title, content,good_boxes:list[ListCoords]
     tk_image = ImageTk.PhotoImage(image)
 
     # Create a label widget to display the image
-    label = tk.Label(root, image=tk_image, text=imag_title,)
+    label = tk.Label(
+        root,
+        image=tk_image,
+        text=imag_title,
+    )
 
     button = tk.Button(root, text="Lire", command=lambda: alire(button, content))
 
-    text = tk.Text(root, height=10,padx=10,pady=10,bg="maroon",fg="white",wrap="word")
+    text = tk.Text(
+        root, height=10, padx=10, pady=10, bg="maroon", fg="white", wrap="word"
+    )
 
-    text.insert(index="1.0", chars=content+"\n\nBounding boxes\n********************************\n")
-    
+    text.insert(
+        index="1.0",
+        chars=content + "\n\nBounding boxes\n********************************\n",
+    )
+
     for element in good_boxes:
         text.insert(index=tk.END, chars=f"{element.label} :: {element.box_2d}\n")
 
-    # text.bind("<Button-1>", alire)
     button.pack(fill="x")
     text.pack(fill="x")
 
@@ -155,7 +149,9 @@ def parse_json(json_output):
     return json_output
 
 
-def plot_bounding_boxes(target_file: ImageFile, boxes_coordinates: list[ListCoords], content: str):
+def plot_bounding_boxes(
+    target_file: ImageFile, boxes_coordinates: list[ListCoords], content: str
+):
     """
     Plots bounding boxes on the given image and displays the result.
     Args:
@@ -202,9 +198,11 @@ def plot_bounding_boxes(target_file: ImageFile, boxes_coordinates: list[ListCoor
     ]
 
     colors.append(additional_colors)
+    if boxes_coordinates is None:
+        return
 
-    good_boxes=[element for element in boxes_coordinates if len(element.box_2d)==4]
-    if len(good_boxes)==0:
+    good_boxes = [element for element in boxes_coordinates if len(element.box_2d) == 4]
+    if len(good_boxes) == 0:
         return
 
     for j, boxe in enumerate(good_boxes):
@@ -247,6 +245,6 @@ def plot_bounding_boxes(target_file: ImageFile, boxes_coordinates: list[ListCoor
     # Display the image
 
     thread_1 = threading.Thread(
-        group=None, target=display_result(imag, "title", content,good_boxes)
+        group=None, target=display_result(imag, "title", content, good_boxes)
     )
     thread_1.start()
